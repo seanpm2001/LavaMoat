@@ -8,6 +8,9 @@
   "devDependencies": {
     "@commitlint/cli": "^17.6.7",
     "@commitlint/config-conventional": "^17.6.7",
+    "@tsconfig/node14": "^14.1.0",
+    "@types/node": "^20.5.9",
+    "@types/yargs": "^17.0.24",
     "ava": "^5.3.1",
     "conventional-changelog-conventionalcommits": "^6.1.0",
     "depcheck": "^1.4.0",
@@ -18,13 +21,17 @@
     "eslint-plugin-react": "^7.33.0",
     "husky": "^8.0.3",
     "lerna": "^7.1.4",
-    "lint-staged": "^13.2.3"
+    "lint-staged": "^13.2.3",
+    "typescript": "^5.2.2"
   },
   "engines": {
     "node": ">=14.0.0"
   },
   "scripts": {
-    "build": "lerna run build",
+    "build": "lerna run build && npm run build:types",
+    "build:types": "tsc -b",
+    "clean:types": "tsc -b --clean",
+    "watch:types": "tsc -b --watch",
     "lint:commit": "commitlint",
     "lint:deps": "lerna run lint:deps",
     "lint:eslint": "eslint .",
@@ -35,7 +42,8 @@
     "release:lerna": "lerna publish",
     "release:rebuild": "npm run rebuild && npm run test:prep && npm run test:workspaces",
     "release": "npm run publish:rebuild && npm run publish:lerna",
-    "rebuild": "lerna run rebuild",
+    "rebuild": "lerna run rebuild && npm run rebuild:types",
+    "rebuild:types": "npm run clean:types && npm run build:types",
     "setup": "allow-scripts",
     "test:prep": "lerna run test:prep",
     "test:workspaces": "npm run --workspaces test",
