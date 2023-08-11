@@ -1,10 +1,11 @@
-const { createScenarioFromScaffold } = require('../util.js')
+const { createScenarioFromScaffold } = require('../util')
 
 module.exports = [
   async () => {
     const scenario = createScenarioFromScaffold({
       name: 'transforms - Ses transforms work',
       defineOne: () => {
+        // @ts-ignore
         const two = require('two')
         module.exports = two
       },
@@ -23,6 +24,7 @@ module.exports = [
       // we still need to ensure this pattern works
       name: 'transforms - common pattern "_inheritsLoose" works with TypeError',
       defineOne: () => {
+        // @ts-ignore
         const two = require('two')
         module.exports = { two }
       },
@@ -43,6 +45,7 @@ module.exports = [
       name: 'transforms - common pattern "_inheritsLoose" works across package boundaries',
       defineOne: () => {
         /* eslint-disable */
+        // @ts-ignore
         const SuperClass = require('two')
         function SubClass () {}
         _inheritsLoose(SubClass, SuperClass)

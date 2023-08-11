@@ -15,6 +15,16 @@ const rootSlug = '$root$'
 
 module.exports = { rootSlug, createModuleInspector, getDefaultPaths }
 
+/**
+ * @todo type this
+ * @typedef {import('node:events').EventEmitter & {inspectModule: (...args?: any[]) => any, generatePolicy(...args?: any[]) => any} ModuleInspector
+ */
+
+/**
+ * @todo type this
+ * @param {*} opts
+ * @returns {ModuleInspector}
+ */
 function createModuleInspector (opts = {}) {
   const moduleIdToModuleRecord = new Map()
   // "packageToModules" does not include builtin modules

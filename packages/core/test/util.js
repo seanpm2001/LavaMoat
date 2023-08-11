@@ -1,3 +1,5 @@
+// @ts-check
+
 const { parseForPolicy, LavamoatModuleRecord, generateKernel, getDefaultPaths } = require('../src/index.js')
 const mergeDeep = require('merge-deep')
 const { runInContext, createContext } = require('vm')
@@ -22,14 +24,29 @@ module.exports = {
   runAndTestScenario,
 }
 
+/**
+ * @private
+ * @typedef {import('./scenarios/scenario').NormalizedScenarioJSFile} NormalizedScenarioJSFile
+ */
+
+/**
+ * @typedef {Partial<import('../src/parseForPolicy').ParseForPolicyOpts> & {files: NormalizedScenarioJSFile[]}} GeneratePolicyFromFilesOpts
+ */
+
+/**
+ *
+ * @param {GeneratePolicyFromFilesOpts} opts
+ * @returns
+ */
 async function generatePolicyFromFiles ({ files, ...opts }) {
+
   const config = await parseForPolicy({
-    moduleSpecifier: files.find(file => file.entry).specifier,
+    moduleSpecifier: /** @type {NormalizedScenarioJSFile} */(files.find(file => file.entry)).specifier,
     resolveHook: (requestedName, parentAddress) => {
-      return files.find(file => file.specifier === parentAddress).importMap[requestedName]
+      return /** @type {NormalizedScenarioJSFile} */(files.find(file => file.specifier === parentAddress)).importMap[requestedName]
     },
     importHook: async (address) => {
-      return new LavamoatModuleRecord(files.find(file => file.specifier === address))
+      return new LavamoatModuleRecord(/** @type {NormalizedScenarioJSFile} */(files.find(file => file.specifier === address)))
     },
     isBuiltin: () => false,
     includeDebugInfo: false,
@@ -39,6 +56,12 @@ async function generatePolicyFromFiles ({ files, ...opts }) {
   return config
 }
 
+/**
+ * Given an incomplete scenario definition, normalize it in preparation for running.
+ * @template [Result=unknown]
+ * @param {import('./scenarios/scenario').Scenario<Result>} scenario
+ * @returns {import('./scenarios/scenario').NormalizedScenario<Result>}
+ */
 function createScenarioFromScaffold ({
   name = 'template scenario',
   expectedResult = {
@@ -47,15 +70,16 @@ function createScenarioFromScaffold ({
   testType = 'deepEqual',
   checkPostRun = async (t, result, err, scenario) => {
     if (err) {
-      await scenario.checkError(t, err, scenario)
+      await /** @type {import('./scenarios/scenario').ScenarioCheckErrorFn<Result>} */(scenario.checkError)(t, err, scenario)
     } else {
-      await scenario.checkResult(t, result, scenario)
+      // assumes `result` is not undefined
+      await /** @type {import('./scenarios/scenario').ScenarioCheckResultFn<Result>} */(scenario.checkResult)(t, /** @type {Result} */(result), scenario)
     }
   },
   checkError = async (t, err, scenario) => {
     if (scenario.expectedFailure) {
       t.truthy(err, `Scenario fails as expected: ${scenario.name} - ${err}`)
-      t.regex(err.message, scenario.expectedFailureMessageRegex, 'Error message expects to match regex')
+      t.regex(err.message, /** @type {RegExp} */(scenario.expectedFailureMessageRegex), 'Error message expects to match regex')
     } else {
       if (err) {
         t.fail(`Unexpected error in scenario: ${scenario.name} - ${err}`)
@@ -74,7 +98,7 @@ function createScenarioFromScaffold ({
   },
   expectedFailure = false,
   expectedFailureMessageRegex = /[\s\S]*/,
-  files = [],
+  files = {},
   builtin = {},
   context = {},
   opts = {scuttleGlobalThis: {}},
@@ -89,11 +113,13 @@ function createScenarioFromScaffold ({
   ...extraArgs
 } = {}) {
   function _defineEntry () {
+    // @ts-expect-error - does not exist
     const testResult = require('one')
     console.log(JSON.stringify(testResult, null, 2))
   }
 
   function _defineOne () {
+    // @ts-expect-error - does not exist
     module.exports = require('two')
   }
 
@@ -259,6 +285,28 @@ function createHookedConsole () {
   }
 }
 
+/**
+ * @template [Result=unknown]
+ * @typedef PlatformRunScenarioOpts
+ * @property {import('./scenarios/scenario').NormalizedScenario<Result>} scenario
+ * @property {boolean} [runWithPrecompiledModules]
+ */
+
+/**
+ * @template [Result=unknown]
+ * @callback PlatformRunScenario
+ * @param {PlatformRunScenarioOpts<Result>} opts
+ * @returns {Promise<Result>}
+ */
+
+/**
+ * Run the given scenario.
+ *
+ * The `scenario` itself should be passed thru `createScenarioFromScaffold` to normalize it.
+ *
+ * @template [Result=unknown]
+ * @type {PlatformRunScenario<Result>}
+ */
 async function runScenario ({
   scenario,
   runWithPrecompiledModules = false,
@@ -319,7 +367,7 @@ async function runScenario ({
       return moduleData
     },
     getRelativeModuleId: (id, relative) => {
-      return files[id].importMap[relative] || relative
+      return /** @type {NormalizedScenarioJSFile} */(files[id]).importMap[relative] || relative
     },
     prepareModuleInitializerArgs,
     ...kernelArgs,
@@ -419,7 +467,14 @@ function evaluateWithSourceUrl (filename, content, context) {
   return { result, vmGlobalThis, vmContext, vmFeralFunction }
 }
 
+/**
+ *
+ * @param {() => any} testFn
+ * @param {Partial<GeneratePolicyFromFilesOpts>} [opts]
+ * @returns
+ */
 async function createConfigForTest (testFn, opts = {}) {
+  /** @type {NormalizedScenarioJSFile[]} */
   const files = [{
     type: 'js',
     specifier: './entry.js',
@@ -462,8 +517,19 @@ function functionToString(func) {
   return `(${func}).call(this)`
 }
 
+/**
+ *
+ * @template [Result=unknown]
+ * @param {import('ava').ExecutionContext} t
+ * @param {import('./scenarios/scenario').NormalizedScenario<Result>} scenario
+ * @param {PlatformRunScenario<Result>} platformRunScenario
+ * @returns {Promise<Result|undefined>}
+ */
 async function runAndTestScenario(t, scenario, platformRunScenario) {
-  let result, err
+  /** @type {Result|undefined} */
+  let result
+  /** @type {Error|undefined} */
+  let err
   try {
     result = await platformRunScenario({ scenario })
   } catch (e) {
