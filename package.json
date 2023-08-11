@@ -20,8 +20,12 @@
     "lerna": "^7.1.4",
     "lint-staged": "^13.2.3"
   },
+  "optionalDependencies": {
+    "corepack": "0.20.0"
+  },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=14.0.0",
+    "npm": ">=7.0.0"
   },
   "scripts": {
     "build": "lerna run build",
