@@ -1,0 +1,7 @@
+/**
+ * @typedef {import ''}
+ */
+
+exports.toEndoPolicy = () => {
+
+}
