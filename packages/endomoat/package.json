@@ -31,5 +31,10 @@
       "test/*.spec.js"
     ],
     "timeout": "30s"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./attenuator/default": "./src/default-attenuator.js",
+    "./attenuator/property": "./src/property-attenuator.js"
   }
 }
