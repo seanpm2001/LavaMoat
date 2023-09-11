@@ -34,6 +34,11 @@ async function setup(cwd) {
 }
 
 async function main() {
+  if (process.version.startsWith('v14') && LAVAMOAT_PM.startsWith('yarn')) {
+    console.error('Skipping Yarn setup for Node.js v14 due to incompatibilities')
+    return
+  }
+
   const dirents = await readdir(PROJECTS_DIR, { withFileTypes: true })
 
   for (const dirent of dirents) {
